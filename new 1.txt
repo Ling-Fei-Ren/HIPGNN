@@ -1,0 +1,62 @@
+     n_auroc = metrics.roc_auc_score(n_true, n_pre)
+            precision, recall, _ = metrics.precision_recall_curve(n_true, n_pre)
+            n_auprc = metrics.auc(recall, precision)
+            n_f1 = metrics.f1_score(n_true, n_predictions, average='macro')
+            n_acc = metrics.accuracy_score(n_true, n_predictions)
+
+            e_auroc = metrics.roc_auc_score(e_true, e_pre.cpu().numpy())
+            e_precision, e_recall, _ = metrics.precision_recall_curve(e_true, e_pre.cpu().numpy())
+            e_auprc = metrics.auc(e_recall, e_precision)
+            e_ap = metrics.average_precision_score(e_true, e_pre.cpu().numpy())
+
+            w_pr_rmse = torch.sqrt(w_pr_loss).item()
+            w_pr_mae = F.l1_loss(w_pr_f, test_edge_weight.float(), reduction='mean').item()
+
+
+            print(
+                f"Epoch: {idx}, Total Loss: {total_loss.item():.4f}, n_cla loss: {n_cl_loss.item():.4f}, "
+                f"e_pre loss: {e_pr_loss.item():.4f}, w_pre loss: {w_pr_loss.item():.4f}, "
+                f"Node Classification - ACC: {n_acc:.4f}, AUROC: {n_auroc:.4f}, "
+                f"F1 Score: {n_f1:.4f}, AUPRC: {n_auprc:.4f}, Link Prediction - AUROC: {e_auroc:.4f}, "
+                f"Average Precision: {e_ap:.4f}, Weight Prediction - MSE: {w_pr_loss.item():.4f}, RMSE: {w_pr_rmse:.4f}, MAE: {w_pr_mae:.4f}"
+            )
+
+
+            if n_auprc > best_metrics['test_auprc']:
+                best_metrics['test_acc'] = n_acc
+                best_metrics['test_auroc'] = n_auroc
+                best_metrics['test_f1'] = n_f1
+                best_metrics['test_auprc'] = n_auprc
+                best_metrics['link_pred_auroc'] = e_auroc
+                best_metrics['link_pred_ap'] = e_ap
+                best_metrics['weight_pred_mse'] = w_pr_loss.item()
+                best_metrics['weight_pred_rmse'] = w_pr_rmse
+                best_metrics['weight_pred_mae'] = w_pr_mae
+                best_epoch = idx
+                with torch.no_grad():
+                    net.eval()
+                    n_embedding, n_cl, e_pr, w_pr, _, _, _, _ = net(e, u, x.to(device))
+                    embeddings_np = n_embedding[test].detach().cpu().numpy()
+                    labels=y[test].detach().cpu().numpy()
+
+                    # 使用 t-SNE 进行降维，降到 2 维以便可视化
+                    tsne = TSNE(n_components=2, random_state=42)
+                    embeddings_2d = tsne.fit_transform(embeddings_np)
+
+                    # 可视化
+                    plt.figure(figsize=(8, 6))
+                    # 按标签分开绘制
+                    for label, name in [(0, 'Normal User'), (1, 'Fraudster')]:
+                        mask = labels == label
+                        plt.scatter(embeddings_2d[mask, 0], embeddings_2d[mask, 1],
+                                    s=50, alpha=0.6, label=name)
+                    plt.legend(fontsize=18)
+                    plt.savefig("t_SNE_w_HipGNN.pdf",  bbox_inches='tight')
+
+
+
+            print(f"Best Metrics @ Epoch {best_epoch}: Node Classification - ACC: {best_metrics['test_acc']:.4f}, "
+                  f"AUROC: {best_metrics['test_auroc']:.4f}, F1 Score: {best_metrics['test_f1']:.4f}, "
+                  f"AUPRC: {best_metrics['test_auprc']:.4f}, Link Prediction - AUROC: {best_metrics['link_pred_auroc']:.4f}, "
+                  f"Average Precision: {best_metrics['link_pred_ap']:.4f}, Weight Prediction - MSE: {best_metrics['weight_pred_mse']:.4f}, "
+                  f"RMSE: {best_metrics['weight_pred_rmse']:.4f}, MAE: {best_metrics['weight_pred_mae']:.4f}")
