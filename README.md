@@ -24,6 +24,9 @@ HIPGNN framework is implemented on Google Colab and major libraries include:
 
 Protein interaction data are extracted from two publicly available protein databases: [STRINGdb](https://string-db.org/) and [CPDB](http://cpdb.molgen.mpg.de/)
 
+Tele anomaly detection is release anonymized at: https://aistudio.baidu.com/datasetdetail/40690?qq-pf-to=pcqq.c2c
+
+
 Cancer gene-related attributes were extracted from the [TCGA](https://www.cancer.gov/ccg/research/genome-sequencing/tcga) database.
 
 In addition to following [EMOGI](https://github.com/schulter/EMOGI)'s data preprocessing methodology, we reprocessed the two protein networks to extract protein interaction confidence and constructed a weighted graph.
